@@ -43,7 +43,7 @@ const Login = ({navigation}) => {
         .then((response) => {
             const result = response.data;
             const {msg,token,user} =result;
-            navigation.navigate('Otpscreen',{user});
+            navigation.navigate('Welcome',{user});
             // const id = String(user._id);
             // axios.put(put_url+id,{isFirstLoggedIn:"false"}).then((response) => {console.log(response.data.user)}).catch((error)=>{})
             
