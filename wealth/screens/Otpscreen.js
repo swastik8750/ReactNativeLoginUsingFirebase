@@ -1,33 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { Formik } from 'formik';
-
-// import firebase from '../firebase';
-// import auth from '@react-native-firebase/auth';
-// import { signInWithCredential,  signInWithPhoneNumber, RecaptchaVerifier, PhoneAuthProvider } from 'firebase/auth';
-import { Octicons, Ionicons } from '@expo/vector-icons';
-import { initializeApp, getApp } from 'firebase/app';
-import { FirebaseRecaptchaVerifierModal, FirebaseRecaptchaBanner } from 'expo-firebase-recaptcha';
-import { getAuth, PhoneAuthProvider, signInWithCredential } from 'firebase/auth';
-// Initialize Firebase JS SDK >=9.x.x
-// https://firebase.google.com/docs/web/setup
-try {
-  initializeApp({
-    apiKey: "AIzaSyB2oojiQXJ22ypZn-DuPvomTQsVhvVTt3Q",
-  authDomain: "swastikjain-225a0.firebaseapp.com",
-  projectId: "swastikjain-225a0",
-  storageBucket: "swastikjain-225a0.appspot.com",
-  messagingSenderId: "725790922127",
-  appId: "1:725790922127:web:5830b3f59afc492cdd67fa",
-  measurementId: "G-EDQF8T6CSJ"
-  });
-} catch (err) {
-  // ignore app already initialized error in snack
-}
-
-// Firebase references
-const app = getApp();
-const auth = getAuth();
+import { Ionicons } from '@expo/vector-icons';
+import firebase from '../firebase';
 import {
     StyledContainer,
     InnerConatainer,
@@ -42,12 +17,7 @@ import {
     StyledButton,
     ButtonText,
     Colors,
-    MsgBox,
     Line,
-    ExtraText,
-    ExtraView,
-    TextLink,
-    TextLinkContent,
 } from './../components/styles';
 import axios from 'axios';
 import { View, ActivityIndicator } from 'react-native';
@@ -55,30 +25,32 @@ import { NavigationHelpersContext } from '@react-navigation/native';
 
 const { brand, darkLight, primary } = Colors;
 const OTPScreen = ({ navigation, route }) => {
-    useEffect(() => {
-        signInWithPhoneNumber();
-    }, [])
-    const recaptchaVerifier = React.useRef(null);
-    const [phoneNumber, setPhoneNumber] = React.useState();
-    setPhoneNumber(route.params.user.phoneNum);
-    const [verificationId, setVerificationId] = React.useState();
-    const [verificationCode, setVerificationCode] = React.useState();
-    async function signInWithPhoneNumber() {
-        try {
-            const phoneProvider = new PhoneAuthProvider(auth);
-            const verificationId = await phoneProvider.verifyPhoneNumber(
-                phoneNumber,
-                recaptchaVerifier.current
-            );
-            setVerificationId(verificationId);
-            showMessage({
-                text: 'Verification code has been sent to your phone.',
-            });
-        } catch (err) {
-            showMessage({ text: `Error: ${err.message}`, color: 'red' });
-        }
-    }
-
+    console.log(route.params.user);
+    console.log(route.params.verificationId);
+    const [code,setcode] = React.useState();
+    const [Response, setResponse] = React.useState(null);
+    const [result,setresult] = React.useState(null);
+    const confirmCode = () => {
+        const put_url = 'http://hiring-tests.herokuapp.com/changeFlag/';   
+        const credential = firebase.auth.PhoneAuthProvider.credential(
+          route.params.verificationId,
+          code
+        );
+        firebase
+          .auth()
+          .signInWithCredential(credential)
+          .then((result) => {
+            console.log(result);
+            setresult(result);
+             const id = String(user._id);
+            axios.put(put_url+id,{isFirstLoggedIn:"false"}).then((response) => {console.log(response.data.user)}).catch((error)=>{})
+            navigation.navigate('Welcome',user);
+          });
+          if(result!==null)
+          {
+              navigation.navigate('Login')
+          }
+      }; 
 
     return (
 
@@ -88,13 +60,11 @@ const OTPScreen = ({ navigation, route }) => {
                 <PageLogo resizeMode="cover" source={require('./../assets/index.jpeg')} />
                 <PageTitle> Equiseed Wealth</PageTitle>
                 <SubTitle>Verify OTP</SubTitle>
-
-
-
                 <Formik
                     initialValues={{ code: '' }}
-                    onSubmit={(values, { setSubmitting }) => {
-
+                    onSubmit={(values,{setSubmitting}) => {
+                        setcode(code);
+                        confirmCode();
                     }}
                 >
                     {({ handleChange, handleBlur, handleSubmit, isSubmitting, values }) => (
@@ -109,25 +79,19 @@ const OTPScreen = ({ navigation, route }) => {
                                 value={values.code}
                             />
 
-                            <StyledButton onPress={async () => {
-                                try {
-                                    const credential = PhoneAuthProvider.credential(
-                                        verificationId,
-                                        verificationCode
-                                    );
-                                    await signInWithCredential(auth, credential);
-                                    showMessage({ text: 'Phone authentication successful 👍' });
-                                } catch (err) {
-                                    showMessage({ text: `Error: ${err.message}`, color: 'red' });
-                                }
-                            }}>
-                                {/* {attemptInvisibleVerification && <FirebaseRecaptchaBanner />} */}
+                            {!isSubmitting &&(
+                                <StyledButton onPress={handleSubmit}>
                                 <ButtonText>
                                     Verify
                                 </ButtonText>
                             </StyledButton>
+                            )}
 
-
+                            {isSubmitting &&(
+                                <StyledButton disable={true}>
+                                <ActivityIndicator size = "large" color={primary}/>
+                            </StyledButton>
+                            )}  
                             <Line />
                         </StyledFormArea>)}
                 </Formik>

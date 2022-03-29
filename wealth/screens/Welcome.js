@@ -14,10 +14,9 @@ import {
     Avatar
 } from './../components/styles';
 
-const Welcome = ({navigation, route }) => {
-    console.log(route.params.user.userName);
+const Welcome = ({navigation, route}) => {
     const [hidePassword, setHidePassword] = useState(true);
-    const {fName,lName, phoneNum} = route.params.user;
+    
     return (
         <>
             <StatusBar style="light" />
@@ -26,10 +25,10 @@ const Welcome = ({navigation, route }) => {
                 <WelcomeContainer>
                     <PageTitle welcome={true}> Hola! Buddy </PageTitle>
                     <SubTitle welcome={true}>
-                        {fName+" "+lName || 'Swastik Jain' }
+                        {route.params.fname+" "+route.params.lname || 'Swastik Jain' }
                     </SubTitle>
                     <SubTitle welcome={true}>
-                        {phoneNum || '+918750578258'}
+                        {route.params.phoneNumber || '+918750578258'}
                     </SubTitle>
                     <StyledFormArea>
                         <Avatar resizeMode="cover" source={require('./../assets/avatar.png')} />

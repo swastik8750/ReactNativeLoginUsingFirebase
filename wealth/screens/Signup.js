@@ -1,8 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState,useRef } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { Formik } from 'formik';
+import { TouchableOpacity} from 'react-native';
 import {  Ionicons } from '@expo/vector-icons';
+import { FirebaseRecaptchaVerifierModal } from 'expo-firebase-recaptcha';
 
+
+import firebase from '../firebase';
 import {
     StyledContainer,
     InnerConatainer,
@@ -27,19 +31,56 @@ import {
 import axios from 'axios';
 import { View,ActivityIndicator } from 'react-native';
 const { brand, darkLight ,primary} = Colors;
-
 const Signup = ({navigation}) => {
     const [hidePassword, setHidePassword] = useState(true);
     const [Message,setMessage] = useState();
     const [Messagetype, setMessagetype] = useState();
+    const [verificationId, setVerificationId] = useState(null);
+    const [code, setCode] = useState('');
+    const recaptchaVerifier = useRef(null);
+    const [matched,setmatched]= useState(false);
+    const [otp,setOtp]=useState(false);
+    const [sending,setsending] = useState(false);
+    const sendVerification = (phoneNumber) => {
+        const phoneProvider = new firebase.auth.PhoneAuthProvider();
+        phoneProvider
+          .verifyPhoneNumber(phoneNumber, recaptchaVerifier.current)
+          .then(setVerificationId);
+          console.log('verifciation '+verificationId);
+      };
+      const confirmCode = () => {
+        console.log('code '+code);
+      const credential = firebase.auth.PhoneAuthProvider.credential(
+        verificationId,
+        code
+      );
+      firebase
+        .auth()
+        .signInWithCredential(credential)
+        .then((result) => {
+          console.log(result);
+          console.log(user);
+          setmatched(true);
+        });
+    };
 
     const handlesignup= (credentials,setSubmitting) => {
         handleMessage(null);
         const url = 'http://hiring-tests.herokuapp.com/addUser';
         const put_url = 'http://hiring-tests.herokuapp.com/changeFlag/';
         const {name, phone, password,email} = credentials;
-        const fname = name.split(" ")
-        const emailsp = email.split("@");
+        if(!sending)
+        {
+            sendVerification('+91'+phone);
+            setsending(true);
+        }
+        
+        setOtp(true);
+        if(matched)
+        {
+
+            const fname = name.split(" ")
+            const emailsp = email.split("@");
         const credential = {
             fName : fname[0],
             lName : fname[1],
@@ -70,6 +111,7 @@ const Signup = ({navigation}) => {
             handleMessage('Something went wrong try again')
         })
     }
+    }
     const handleMessage = (message, type = 'FAILED') => {
         setMessage(message);
         setMessagetype(type);
@@ -79,7 +121,24 @@ const Signup = ({navigation}) => {
 
     return (
         <StyledContainer>
+             <FirebaseRecaptchaVerifierModal
+          ref={recaptchaVerifier}
+          firebaseConfig={
+              {apiKey: "AIzaSyA2LfsaU7pcRDvwhHw38vfmnmw5Ng8gLik",
+
+          authDomain: "fir-fae34.firebaseapp.com",
+          
+          projectId: "fir-fae34",
+          
+          storageBucket: "fir-fae34.appspot.com",
+          
+          messagingSenderId: "864759252483",
+          
+          appId: "1:864759252483:web:94ccbe0fe3680eb82cf036"}
+        }
+        />
             <StatusBar Style="dark" />
+            {!otp && (
             <InnerConatainer>
                 {/* <PageLogo resizeMode="cover" source={require('./../assets/index.jpeg')} /> */}
                 <PageTitle> Equiseed Wealth</PageTitle>
@@ -189,7 +248,24 @@ const Signup = ({navigation}) => {
                         </StyledFormArea>)}
                 </Formik>
             </InnerConatainer>
+            )}
+            {otp && ( <MyTextInput
+            label="Enter OTP"
+            icon="lock-closed-sharp"
+            placeholder="1 2 3 4 5 6"
+            placeholderTextColor={darkLight}
+            onChangeText={setCode}
+
+            />
+            
+            )}
+            {otp && (<TouchableOpacity onPress={confirmCode}>
+                <TextLinkContent>
+                    Verify OTP
+                </TextLinkContent>
+</TouchableOpacity>)}
         </StyledContainer>
+        
     );
 };
 
