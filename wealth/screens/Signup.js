@@ -5,7 +5,6 @@ import { TouchableOpacity} from 'react-native';
 import {  Ionicons } from '@expo/vector-icons';
 import { FirebaseRecaptchaVerifierModal } from 'expo-firebase-recaptcha';
 
-
 import firebase from '../firebase';
 import {
     StyledContainer,
@@ -41,6 +40,14 @@ const Signup = ({navigation}) => {
     const [matched,setmatched]= useState(false);
     const [otp,setOtp]=useState(false);
     const [sending,setsending] = useState(false);
+
+    const [fname,setfname] = useState();
+    const [lname,setlname] = useState();
+    const [email,setemail] = useState();
+    const [phoneNumber,setPhoneNumber] = useState();
+    const [username, setusername] = useState();
+    const [password,setpassword] = useState();
+
     const sendVerification = (phoneNumber) => {
         const phoneProvider = new firebase.auth.PhoneAuthProvider();
         phoneProvider
@@ -49,6 +56,8 @@ const Signup = ({navigation}) => {
           console.log('verifciation '+verificationId);
       };
       const confirmCode = () => {
+        const url = 'http://hiring-tests.herokuapp.com/addUser';
+        const put_url = 'http://hiring-tests.herokuapp.com/changeFlag/';
         console.log('code '+code);
       const credential = firebase.auth.PhoneAuthProvider.credential(
         verificationId,
@@ -59,59 +68,56 @@ const Signup = ({navigation}) => {
         .signInWithCredential(credential)
         .then((result) => {
           console.log(result);
-          console.log(user);
+        //   console.log(user);
+        const credential = {
+            fName : fname,
+            lName : lname,
+            email:email,
+            phoneNum: phoneNumber,
+            userName : username,
+            password: password
+        };
           setmatched(true);
+          axios
+          .post(url,credential)
+          .then((response) => {
+              const result = response.data;
+              const {status,savedUser,message} =result;
+              if(status!=='success')
+              {
+                  handleMessage(message);
+              }
+              else{ 
+                  const id = String(savedUser._id);
+                  axios.put(put_url+id,{isFirstLoggedIn:"true"}).then((response) => {console.log(response.data.user)}).catch((error)=>{})
+                  navigation.navigate('Welcome',{fname,lname,phoneNumber});
+              }
+          })
+          .catch((error) => {
+             
+              console.log(error);
+              handleMessage('Something went wrong try again')
+          })
         });
     };
 
     const handlesignup= (credentials,setSubmitting) => {
         handleMessage(null);
-        const url = 'http://hiring-tests.herokuapp.com/addUser';
-        const put_url = 'http://hiring-tests.herokuapp.com/changeFlag/';
+       
         const {name, phone, password,email} = credentials;
-        if(!sending)
-        {
-            sendVerification('+91'+phone);
-            setsending(true);
-        }
-        
+        const fname = name.split(" ")
+        const emailsp = email.split("@");
+        setfname(fname[0]);
+        setusername(emailsp[0]);
+        setemail(email);
+        setlname(fname[1]);
+        setpassword(password);
+        setPhoneNumber(phone);
+        sendVerification('+91'+phone);
+        setsending(true);
         setOtp(true);
-        if(matched)
-        {
+    }
 
-            const fname = name.split(" ")
-            const emailsp = email.split("@");
-        const credential = {
-            fName : fname[0],
-            lName : fname[1],
-            email:email,
-            phoneNum: phone,
-            userName : emailsp[0],
-            password: password
-        };
-        axios
-        .post(url,credential)
-        .then((response) => {
-            const result = response.data;
-            const {status,savedUser,message} =result;
-            if(status!=='success')
-            {
-                handleMessage(message);
-            }
-            else{ 
-                const id = String(savedUser._id);
-                axios.put(put_url+id,{isFirstLoggedIn:"true"}).then((response) => {console.log(response.data.user)}).catch((error)=>{})
-                navigation.navigate('Welcome',{user:savedUser});
-                setSubmitting(false);
-            }
-        })
-        .catch((error) => {
-            setSubmitting(false);
-            // console.log(error.JSON());
-            handleMessage('Something went wrong try again')
-        })
-    }
-    }
     const handleMessage = (message, type = 'FAILED') => {
         setMessage(message);
         setMessagetype(type);
