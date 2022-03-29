@@ -1,8 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState,useRef } from 'react';
+import { TouchableOpacity} from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Formik } from 'formik';
 import { Octicons, Ionicons } from '@expo/vector-icons';
+import { FirebaseRecaptchaVerifierModal } from 'expo-firebase-recaptcha';
 
+
+import firebase from '../firebase';
 import {
     StyledContainer,
     InnerConatainer,
@@ -32,7 +36,41 @@ const { brand, darkLight,primary } = Colors;
 const Login = ({navigation}) => {
     const [hidePassword, setHidePassword] = useState(true);
     const [Message,setMessage] = useState();
+    const [verificationId, setVerificationId] = useState(null);
+    const recaptchaVerifier = useRef(null);
     const [Messagetype, setMessagetype] = useState();
+    const [phoneNumber, setPhoneNumber] = useState();
+    const[fname,setfname] =useState();
+    const [lname , setlname] = useState();
+    const [code, setCode] = useState('');
+    const [otp,setOtp]=useState(false);
+    const user='';
+    const sendVerification = (phoneNumber) => {
+        const phoneProvider = new firebase.auth.PhoneAuthProvider();
+        phoneProvider
+          .verifyPhoneNumber(phoneNumber, recaptchaVerifier.current)
+          .then(setVerificationId);
+          console.log('verifciation '+verificationId);
+          
+      };
+    
+      const confirmCode = () => {
+          console.log('code '+code);
+        const credential = firebase.auth.PhoneAuthProvider.credential(
+          verificationId,
+          code
+        );
+        firebase
+          .auth()
+          .signInWithCredential(credential)
+          .then((result) => {
+            console.log(result);
+            console.log(user);
+            navigation.navigate('Welcome',{fname,lname,phoneNumber});
+          });
+      };
+      
+
 
     const handlelogin = (credentials,setSubmitting) => {
         handleMessage(null);
@@ -41,15 +79,34 @@ const Login = ({navigation}) => {
         axios
         .post(url,credentials)
         .then((response) => {
-            const result = response.data;
-            const {msg,token,user} =result;
-            navigation.navigate('Welcome',{user});
-            // const id = String(user._id);
-            // axios.put(put_url+id,{isFirstLoggedIn:"false"}).then((response) => {console.log(response.data.user)}).catch((error)=>{})
+            const res = response.data;
             
+            const {msg,token,user} =res;
+            console.log('phonenumber');
+            sendVerification('+91'+user.phoneNum);
+            console.log(user);
+            setPhoneNumber('+91'+user.phoneNum);
+            setOtp(true);
+            const{fName,lName,phoneNum}=user;
+            setfname(fName);
+            setlname(lName);
+           
+            // if(user.phoneNum)
+            // {
+                
+            //     sendVerification('+91'+user.phoneNum);
+            //     // if(verificationId)
+            //     // {
+
+            //     //     navigation.navigate('Otpscreen',{user,verificationId});
+            //     // }
+            // } 
+           
             setSubmitting(false);
+            handleMessage('Click to send otp')
         })
         .catch((error) => {
+            console.log(error);
             setSubmitting(false);
             // console.log(error.JSON());
             handleMessage('User Not Found')
@@ -61,11 +118,28 @@ const Login = ({navigation}) => {
     }
 
     return (
+       
         <StyledContainer>
+             <FirebaseRecaptchaVerifierModal
+          ref={recaptchaVerifier}
+          firebaseConfig={
+              {apiKey: "AIzaSyA2LfsaU7pcRDvwhHw38vfmnmw5Ng8gLik",
+
+          authDomain: "fir-fae34.firebaseapp.com",
+          
+          projectId: "fir-fae34",
+          
+          storageBucket: "fir-fae34.appspot.com",
+          
+          messagingSenderId: "864759252483",
+          
+          appId: "1:864759252483:web:94ccbe0fe3680eb82cf036"}
+        }
+        />
             <StatusBar Style="dark" />
             <InnerConatainer>
                 <PageLogo resizeMode="cover" source={require('./../assets/index.jpeg')} />
-                <PageTitle> Equiseed Wealth</PageTitle>
+                {/* <PageTitle> Equiseed Wealth</PageTitle> */}
                 <SubTitle>Account Login</SubTitle>
                 <Formik
                     initialValues={{ email: '', password: '' }}
@@ -120,7 +194,22 @@ const Login = ({navigation}) => {
                                 <ActivityIndicator size = "large" color={primary}/>
                             </StyledButton>
                             )}  
+                           {otp && ( <MyTextInput
+                                label="Enter OTP"
+                                icon="lock-closed-sharp"
+                                placeholder="1 2 3 4 5 6"
+                                placeholderTextColor={darkLight}
+                                onChangeText={setCode}
 
+                                />
+                                
+                                )}
+                                {otp && (<TouchableOpacity onPress={confirmCode}>
+                                    <TextLinkContent>
+                                        Verify OTP
+                                    </TextLinkContent>
+        </TouchableOpacity>)}
+                           
                             <ExtraView>
                                 <ExtraText>
                                     Don't have account?
@@ -131,6 +220,7 @@ const Login = ({navigation}) => {
                                     </TextLinkContent>
 
                                 </TextLink>
+
                             </ExtraView>
                             <Line />
                         </StyledFormArea>)}
